@@ -215,7 +215,7 @@ func TestTotal_Zero(t *testing.T) {
 }
 
 func TestHTTPStat_Formatter(t *testing.T) {
-	result := Result{
+	result := &Result{
 		DNSLookup:        100 * time.Millisecond,
 		TCPConnection:    100 * time.Millisecond,
 		TLSHandshake:     100 * time.Millisecond,

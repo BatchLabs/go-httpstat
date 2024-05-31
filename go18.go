@@ -1,3 +1,4 @@
+//go:build go1.8
 // +build go1.8
 
 package httpstat
@@ -41,10 +42,16 @@ func (r *Result) Total(t time.Time) time.Duration {
 func withClientTrace(ctx context.Context, r *Result) context.Context {
 	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		DNSStart: func(i httptrace.DNSStartInfo) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.dnsStart = time.Now()
 		},
 
 		DNSDone: func(i httptrace.DNSDoneInfo) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.dnsDone = time.Now()
 
 			r.DNSLookup = r.dnsDone.Sub(r.dnsStart)
@@ -52,6 +59,9 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		ConnectStart: func(_, _ string) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.tcpStart = time.Now()
 
 			// When connecting to IP (When no DNS lookup)
@@ -62,6 +72,9 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		ConnectDone: func(network, addr string, err error) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.tcpDone = time.Now()
 
 			r.TCPConnection = r.tcpDone.Sub(r.tcpStart)
@@ -69,11 +82,17 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		TLSHandshakeStart: func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.isTLS = true
 			r.tlsStart = time.Now()
 		},
 
 		TLSHandshakeDone: func(_ tls.ConnectionState, _ error) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.tlsDone = time.Now()
 
 			r.TLSHandshake = r.tlsDone.Sub(r.tlsStart)
@@ -81,7 +100,11 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		GotConn: func(i httptrace.GotConnInfo) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			// Handle when keep alive is used and connection is reused.
+			//
 			// DNSStart(Done) and ConnectStart(Done) is skipped
 			if i.Reused {
 				r.isReused = true
@@ -89,6 +112,9 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.serverStart = time.Now()
 
 			// When client doesn't use DialContext or using old (before go1.7) `net`
@@ -123,6 +149,9 @@ func withClientTrace(ctx context.Context, r *Result) context.Context {
 		},
 
 		GotFirstResponseByte: func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
 			r.serverDone = time.Now()
 
 			r.ServerProcessing = r.serverDone.Sub(r.serverStart)

@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 )
 
 // Result stores httpstat info.
 type Result struct {
+	mu sync.Mutex
+
 	// The following are duration for each phase
 	DNSLookup        time.Duration
 	TCPConnection    time.Duration
@@ -69,7 +72,7 @@ func (r *Result) durations() map[string]time.Duration {
 }
 
 // Format formats stats result.
-func (r Result) Format(s fmt.State, verb rune) {
+func (r *Result) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
